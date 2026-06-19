@@ -47,6 +47,7 @@ We have provided a helper script `./run.sh` that automatically activates the Pyt
     *   Project ID: `my-project-id` or `projects/my-project-id`
 *   `-t, --asset-type TEXT`: Filter by specific asset type(s) (e.g. `compute.googleapis.com/Instance`, `storage.googleapis.com/Bucket`). Can be specified multiple times. If omitted, queries all resource types.
 *   `--vms-only`: Shortcut to query only compute VM instances and show a detailed VM-specific columns layout.
+*   `-g, --group-by [project|type]`: Group the output table(s) dynamically by project or resource type.
 *   `-q, --query TEXT`: Filter query (e.g., `state: RUNNING` to only list active resources, or `name: prod-*`).
 *   `-f, --format [table|json|csv]`: Output format (default: `table`).
 
@@ -74,15 +75,21 @@ We have provided a helper script `./run.sh` that automatically activates the Pyt
 ./run.sh --scope "projects/proj-oka-int-demo" --vms-only --query "state: RUNNING"
 ```
 
-### 5. Output all resources as JSON
+### 5. Group all resources in the organization by Project ID
+```bash
+./run.sh --scope "organizations/340934488751" --group-by project
+```
+
+### 6. Output all resources as JSON
 ```bash
 ./run.sh --scope "projects/proj-oka-int-demo" --format json
 ```
 
-### 6. Save resources list to a CSV file
+### 7. Save resources list to a CSV file
 ```bash
 ./run.sh --scope "projects/proj-oka-int-demo" --format csv > resources.csv
 ```
+
 
 ---
 

@@ -3,6 +3,7 @@ import click
 import json
 import csv
 import sys
+from collections import defaultdict
 from google.cloud import asset_v1
 from google.protobuf.json_format import MessageToDict
 from rich.console import Console
@@ -124,6 +125,65 @@ def extract_generic_details(inst):
         if email:
             details.append(f"Email: {email}")
 
+    elif asset_type == "container.googleapis.com/Cluster":
+        node_count = add_attrs.get("currentNodeCount") or add_attrs.get("current_node_count") or ""
+        endpoint = add_attrs.get("endpoint") or ""
+        if node_count:
+            details.append(f"Nodes: {node_count}")
+        if endpoint:
+            details.append(f"Endpoint: {endpoint}")
+            
+    elif asset_type == "dataproc.googleapis.com/Cluster":
+        config = add_attrs.get("config") or add_attrs.get("clusterConfig") or {}
+        worker_config = config.get("workerConfig") or {}
+        num_instances = worker_config.get("numInstances") or worker_config.get("num_instances") or ""
+        if num_instances:
+            details.append(f"Workers: {num_instances}")
+            
+    elif asset_type == "compute.googleapis.com/Interconnect":
+        link_type = add_attrs.get("linkType") or ""
+        if link_type:
+            details.append(f"LinkType: {link_type}")
+        op_status = add_attrs.get("operationalStatus") or ""
+        if op_status:
+            details.append(f"OpStatus: {op_status}")
+            
+    elif asset_type == "compute.googleapis.com/InterconnectAttachment":
+        bandwidth = add_attrs.get("bandwidth") or ""
+        if bandwidth:
+            details.append(f"Bandwidth: {bandwidth}")
+        router = add_attrs.get("router") or ""
+        if "/" in router:
+            router = router.split("/")[-1]
+        if router:
+            details.append(f"Router: {router}")
+
+    # Fallback: Extract key fields dynamically if no explicit rules matched or details is empty
+    if not details and add_attrs:
+        ignore_keys = {
+            "id", "name", "selfLink", "self_link", "creationTimestamp", 
+            "creation_timestamp", "status", "state", "displayName", "display_name", 
+            "description", "location", "project", "organization", "folder", "networkInterfaceNames"
+        }
+        for key, val in add_attrs.items():
+            if key in ignore_keys or val is None:
+                continue
+            if isinstance(val, (dict, list)):
+                if not val:
+                    continue
+                if isinstance(val, list) and all(isinstance(x, (str, int, float, bool)) for x in val):
+                    val_str = ", ".join(map(str, val))
+                    if len(val_str) > 40:
+                        val_str = val_str[:37] + "..."
+                    details.append(f"{key}: [{val_str}]")
+                continue
+            val_str = str(val)
+            if len(val_str) > 60:
+                continue
+            details.append(f"{key}: {val_str}")
+            if len(details) >= 3:
+                break
+
     detail_str = ", ".join(details) if details else "N/A"
     return short_type, status, detail_str
 
@@ -132,8 +192,9 @@ def extract_generic_details(inst):
 @click.option('--query', '-q', default="", help="Query string for filtering assets (e.g. 'state: RUNNING')")
 @click.option('--asset-type', '-t', multiple=True, help="Asset type(s) to filter by (e.g. 'compute.googleapis.com/Instance'). Can be specified multiple times. If omitted, lists all resource types.")
 @click.option('--vms-only', is_flag=True, help="Shortcut to list only compute VM instances and show detailed columns.")
+@click.option('--group-by', '-g', type=click.Choice(['project', 'type']), default=None, help="Group resources in the output by project or resource type.")
 @click.option('--format', '-f', type=click.Choice(['table', 'json', 'csv']), default='table', help="Output format")
-def main(scope, query, asset_type, vms_only, format):
+def main(scope, query, asset_type, vms_only, group_by, format):
     """GCP Cloud Asset Inventory Agent.
     
     Searches for and displays resources inside the specified GCP scope.
@@ -153,11 +214,13 @@ def main(scope, query, asset_type, vms_only, format):
             console.print(f"[bold blue]🔍 Cloud Asset Agent searching for Compute VM Instances...[/bold blue]")
         else:
             console.print(f"[bold blue]🔍 Cloud Asset Agent searching for GCP Resources...[/bold blue]")
-        console.print(f"   Scope:  [green]{formatted_scope}[/green]")
+        console.print(f"   Scope:    [green]{formatted_scope}[/green]")
         if actual_asset_types:
-            console.print(f"   Types:  [yellow]{', '.join(actual_asset_types)}[/yellow]")
+            console.print(f"   Types:    [yellow]{', '.join(actual_asset_types)}[/yellow]")
         if query:
-            console.print(f"   Filter: [yellow]'{query}'[/yellow]")
+            console.print(f"   Filter:   [yellow]'{query}'[/yellow]")
+        if group_by:
+            console.print(f"   Group By: [cyan]{group_by}[/cyan]")
         console.print()
 
     client = asset_v1.AssetServiceClient()
@@ -195,6 +258,12 @@ def main(scope, query, asset_type, vms_only, format):
         # Convert to dictionary representation preserving field names (snake_case)
         resources = [MessageToDict(res._pb, preserving_proto_field_name=True) for res in raw_resources]
 
+        # Standard Sorting (Helps group JSON/CSV exports cleanly too)
+        if group_by == 'project':
+            resources.sort(key=lambda x: clean_project(x.get("project", "")))
+        elif group_by == 'type':
+            resources.sort(key=lambda x: x.get("asset_type", ""))
+
         if format == 'json':
             print(json.dumps(resources, indent=2))
             return
@@ -228,99 +297,181 @@ def main(scope, query, asset_type, vms_only, format):
                     ])
             return
 
-        # Default format: Rich Table
-        if is_vm_specific:
-            table = Table(
-                title=f"Compute VM Instances in {formatted_scope}",
-                show_header=True,
-                header_style="bold magenta",
-                title_style="bold cyan"
-            )
-            table.add_column("VM Name", style="bold white")
-            table.add_column("Project", style="green")
-            table.add_column("Zone/Location", style="blue")
-            table.add_column("Status", justify="center")
-            table.add_column("Machine Type", style="dim yellow")
-            table.add_column("Internal IP(s)", style="cyan")
-            table.add_column("External IP(s)", style="magenta")
-
+        # Default format: Rich Table (with optional grouping layout)
+        if group_by == 'project':
+            # Group items by project name
+            project_groups = defaultdict(list)
             for inst in resources:
-                name = inst.get("display_name") or inst.get("displayName", "N/A")
-                project = clean_project(inst.get("project", ""))
-                zone = clean_zone(inst.get("location", ""))
+                proj = clean_project(inst.get("project", ""))
+                project_groups[proj].append(inst)
                 
-                status, machine_type, internal_ips, external_ips = extract_vm_attrs(inst)
-
-                # Style status
-                status_style = "dim"
-                status_str = status.upper()
-                if status_str == "RUNNING":
-                    status_style = "bold green"
-                elif status_str in ("TERMINATED", "STOPPED"):
-                    status_style = "bold red"
-                elif status_str in ("PROVISIONING", "STAGING"):
-                    status_style = "bold yellow"
-                elif status_str in ("STOPPING", "SUSPENDING"):
-                    status_style = "italic red"
+            for proj_name, items in sorted(project_groups.items()):
+                title = f"Project: {proj_name} ({len(items)} resources)"
+                if is_vm_specific:
+                    table = Table(title=title, show_header=True, header_style="bold magenta", title_style="bold cyan")
+                    table.add_column("VM Name", style="bold white")
+                    table.add_column("Zone/Location", style="blue")
+                    table.add_column("Status", justify="center")
+                    table.add_column("Machine Type", style="dim yellow")
+                    table.add_column("Internal IP(s)", style="cyan")
+                    table.add_column("External IP(s)", style="magenta")
                     
-                status_formatted = f"[{status_style}]{status_str}[/{status_style}]"
+                    for inst in items:
+                        name = inst.get("display_name") or inst.get("displayName", "N/A")
+                        zone = clean_zone(inst.get("location", ""))
+                        status, machine_type, internal_ips, external_ips = extract_vm_attrs(inst)
+                        
+                        status_style = "dim"
+                        status_str = status.upper()
+                        if status_str == "RUNNING":
+                            status_style = "bold green"
+                        elif status_str in ("TERMINATED", "STOPPED"):
+                            status_style = "bold red"
+                        status_formatted = f"[{status_style}]{status_str}[/{status_style}]"
+                        
+                        table.add_row(
+                            name, zone, status_formatted, machine_type,
+                            ", ".join(internal_ips) if internal_ips else "N/A",
+                            ", ".join(external_ips) if external_ips else "N/A"
+                        )
+                else:
+                    table = Table(title=title, show_header=True, header_style="bold magenta", title_style="bold cyan")
+                    table.add_column("Resource Name", style="bold white")
+                    table.add_column("Type", style="yellow")
+                    table.add_column("Zone/Location", style="blue")
+                    table.add_column("Status", justify="center")
+                    table.add_column("Details", style="dim cyan")
+                    
+                    for inst in items:
+                        name = inst.get("display_name") or inst.get("displayName", "N/A")
+                        zone = clean_zone(inst.get("location", ""))
+                        short_type, status, details = extract_generic_details(inst)
+                        
+                        status_style = "dim"
+                        status_str = status.upper()
+                        if status_str in ("RUNNING", "ACTIVE", "READY", "TRUE"):
+                            status_style = "bold green"
+                        elif status_str in ("TERMINATED", "STOPPED", "DELETED", "FALSE"):
+                            status_style = "bold red"
+                        status_formatted = f"[{status_style}]{status_str}[/{status_style}]"
+                        
+                        table.add_row(name, short_type, zone, status_formatted, details)
+                console.print(table)
+                console.print()
                 
-                table.add_row(
-                    name,
-                    project,
-                    zone,
-                    status_formatted,
-                    machine_type,
-                    ", ".join(internal_ips) if internal_ips else "N/A",
-                    ", ".join(external_ips) if external_ips else "N/A"
-                )
-        else:
-            # General inventory table
-            table = Table(
-                title=f"GCP Resource Inventory in {formatted_scope}",
-                show_header=True,
-                header_style="bold magenta",
-                title_style="bold cyan"
-            )
-            table.add_column("Resource Name", style="bold white")
-            table.add_column("Type", style="yellow")
-            table.add_column("Project", style="green")
-            table.add_column("Zone/Location", style="blue")
-            table.add_column("Status", justify="center")
-            table.add_column("Details", style="dim cyan")
-
+        elif group_by == 'type':
+            # Group items by asset type name
+            type_groups = defaultdict(list)
             for inst in resources:
-                name = inst.get("display_name") or inst.get("displayName", "N/A")
-                project = clean_project(inst.get("project", ""))
-                zone = clean_zone(inst.get("location", ""))
+                asset_type = inst.get("asset_type") or inst.get("assetType", "Unknown")
+                type_groups[asset_type].append(inst)
                 
-                short_type, status, details = extract_generic_details(inst)
-
-                # Style status
-                status_style = "dim"
-                status_str = status.upper()
-                if status_str in ("RUNNING", "ACTIVE", "READY", "TRUE"):
-                    status_style = "bold green"
-                elif status_str in ("TERMINATED", "STOPPED", "DELETED", "FALSE"):
-                    status_style = "bold red"
-                elif status_str in ("PROVISIONING", "CREATING"):
-                    status_style = "bold yellow"
-                elif status_str == "N/A":
+            for type_name, items in sorted(type_groups.items()):
+                short_type = type_name.split("/")[-1] if "/" in type_name else type_name
+                title = f"Resource Type: {short_type} ({len(items)} resources)"
+                
+                table = Table(title=title, show_header=True, header_style="bold magenta", title_style="bold cyan")
+                table.add_column("Resource Name", style="bold white")
+                table.add_column("Project", style="green")
+                table.add_column("Zone/Location", style="blue")
+                table.add_column("Status", justify="center")
+                table.add_column("Details", style="dim cyan")
+                
+                for inst in items:
+                    name = inst.get("display_name") or inst.get("displayName", "N/A")
+                    project = clean_project(inst.get("project", ""))
+                    zone = clean_zone(inst.get("location", ""))
+                    _, status, details = extract_generic_details(inst)
+                    
                     status_style = "dim"
+                    status_str = status.upper()
+                    if status_str in ("RUNNING", "ACTIVE", "READY", "TRUE"):
+                        status_style = "bold green"
+                    elif status_str in ("TERMINATED", "STOPPED", "DELETED", "FALSE"):
+                        status_style = "bold red"
+                    status_formatted = f"[{status_style}]{status_str}[/{status_style}]"
                     
-                status_formatted = f"[{status_style}]{status_str}[/{status_style}]"
+                    table.add_row(name, project, zone, status_formatted, details)
+                console.print(table)
+                console.print()
                 
-                table.add_row(
-                    name,
-                    short_type,
-                    project,
-                    zone,
-                    status_formatted,
-                    details
+        else:
+            # Default single flat table format
+            if is_vm_specific:
+                table = Table(
+                    title=f"Compute VM Instances in {formatted_scope}",
+                    show_header=True,
+                    header_style="bold magenta",
+                    title_style="bold cyan"
                 )
+                table.add_column("VM Name", style="bold white")
+                table.add_column("Project", style="green")
+                table.add_column("Zone/Location", style="blue")
+                table.add_column("Status", justify="center")
+                table.add_column("Machine Type", style="dim yellow")
+                table.add_column("Internal IP(s)", style="cyan")
+                table.add_column("External IP(s)", style="magenta")
 
-        console.print(table)
-        console.print(f"\n[bold green]✅ Total resources found: {len(resources)}[/bold green]")
+                for inst in resources:
+                    name = inst.get("display_name") or inst.get("displayName", "N/A")
+                    project = clean_project(inst.get("project", ""))
+                    zone = clean_zone(inst.get("location", ""))
+                    status, machine_type, internal_ips, external_ips = extract_vm_attrs(inst)
+
+                    status_style = "dim"
+                    status_str = status.upper()
+                    if status_str == "RUNNING":
+                        status_style = "bold green"
+                    elif status_str in ("TERMINATED", "STOPPED"):
+                        status_style = "bold red"
+                    elif status_str in ("PROVISIONING", "STAGING"):
+                        status_style = "bold yellow"
+                    elif status_str in ("STOPPING", "SUSPENDING"):
+                        status_style = "italic red"
+                    status_formatted = f"[{status_style}]{status_str}[/{status_style}]"
+                    
+                    table.add_row(
+                        name, project, zone, status_formatted, machine_type,
+                        ", ".join(internal_ips) if internal_ips else "N/A",
+                        ", ".join(external_ips) if external_ips else "N/A"
+                    )
+            else:
+                table = Table(
+                    title=f"GCP Resource Inventory in {formatted_scope}",
+                    show_header=True,
+                    header_style="bold magenta",
+                    title_style="bold cyan"
+                )
+                table.add_column("Resource Name", style="bold white")
+                table.add_column("Type", style="yellow")
+                table.add_column("Project", style="green")
+                table.add_column("Zone/Location", style="blue")
+                table.add_column("Status", justify="center")
+                table.add_column("Details", style="dim cyan")
+
+                for inst in resources:
+                    name = inst.get("display_name") or inst.get("displayName", "N/A")
+                    project = clean_project(inst.get("project", ""))
+                    zone = clean_zone(inst.get("location", ""))
+                    short_type, status, details = extract_generic_details(inst)
+
+                    status_style = "dim"
+                    status_str = status.upper()
+                    if status_str in ("RUNNING", "ACTIVE", "READY", "TRUE"):
+                        status_style = "bold green"
+                    elif status_str in ("TERMINATED", "STOPPED", "DELETED", "FALSE"):
+                        status_style = "bold red"
+                    elif status_str in ("PROVISIONING", "CREATING"):
+                        status_style = "bold yellow"
+                    elif status_str == "N/A":
+                        status_style = "dim"
+                    status_formatted = f"[{status_style}]{status_str}[/{status_style}]"
+                    
+                    table.add_row(name, short_type, project, zone, status_formatted, details)
+            console.print(table)
+            console.print()
+
+        console.print(f"[bold green]✅ Total resources found: {len(resources)}[/bold green]")
         
     except Exception as e:
         console.print(f"\n[bold red]❌ Error listing assets: {str(e)}[/bold red]")
