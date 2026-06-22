@@ -195,7 +195,7 @@ def extract_generic_details(inst):
 @click.option('--group-by', '-g', type=click.Choice(['project', 'type']), default=None, help="Group resources in the output by project or resource type.")
 @click.option('--format', '-f', type=click.Choice(['table', 'json', 'csv']), default='table', help="Output format")
 def main(scope, query, asset_type, vms_only, group_by, format):
-    """GCP Cloud Asset Inventory Agent.
+    """GCP Cloud Asset Inventory CLI Tool.
     
     Searches for and displays resources inside the specified GCP scope.
     """
@@ -211,9 +211,10 @@ def main(scope, query, asset_type, vms_only, group_by, format):
     
     if format == 'table':
         if is_vm_specific:
-            console.print(f"[bold blue]🔍 Cloud Asset Agent searching for Compute VM Instances...[/bold blue]")
+            console.print(f"[bold blue]🔍 Cloud Asset CLI Tool searching for Compute VM Instances...[/bold blue]")
         else:
-            console.print(f"[bold blue]🔍 Cloud Asset Agent searching for GCP Resources...[/bold blue]")
+            console.print(f"[bold blue]🔍 Cloud Asset CLI Tool searching for GCP Resources...[/bold blue]")
+
         console.print(f"   Scope:    [green]{formatted_scope}[/green]")
         if actual_asset_types:
             console.print(f"   Types:    [yellow]{', '.join(actual_asset_types)}[/yellow]")

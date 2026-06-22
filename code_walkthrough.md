@@ -1,11 +1,12 @@
 # Python Code Walkthrough (For Terraform Developers)
 
-This guide walks you through the Python agent script `agent.py` line-by-line, comparing it to concepts you know from Terraform and HashiCorp Configuration Language (HCL).
+This guide walks you through the Python script `asset_inventory.py` line-by-line, comparing it to concepts you know from Terraform and HashiCorp Configuration Language (HCL).
 
 ---
 
 ## 1. Imports vs. Providers
-At the very top of `agent.py`, we import libraries:
+At the very top of `asset_inventory.py`, we import libraries:
+
 
 ```python
 import click

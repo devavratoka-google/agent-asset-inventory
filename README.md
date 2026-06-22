@@ -1,6 +1,6 @@
-# GCP Cloud Asset Inventory Resource Agent
+# GCP Cloud Asset Inventory CLI Tool
 
-This directory contains a Python-based command-line agent that queries Google Cloud Asset Inventory to list and display GCP resources in a specified scope (Organization, Folder, or Project).
+This is a local Python-based command-line tool that queries Google Cloud Asset Inventory to list and display GCP resources in a specified scope (Organization, Folder, or Project).
 
 It can retrieve a complete inventory of all resources (e.g., Disks, Buckets, Networks, SQL Instances) or render a specialized, detailed table for Compute VM Instances.
 
@@ -10,7 +10,7 @@ It supports rendering outputs in a premium, beautifully-styled CLI table, JSON f
 
 ### 1. Authenticate with Google Cloud
 
-The agent uses **Application Default Credentials (ADC)** to connect to Google Cloud. If your active credentials have expired, run:
+The tool uses **Application Default Credentials (ADC)** to connect to Google Cloud. If your active credentials have expired, run:
 
 ```bash
 gcloud auth application-default login
@@ -29,9 +29,9 @@ To query Cloud Asset Inventory, your user account or service account needs the *
 
 ---
 
-## How to Run the Agent
+## How to Run the Tool
 
-We have provided a helper script `./run.sh` that automatically activates the Python virtual environment and executes the agent.
+We have provided a helper script `./run.sh` that automatically activates the Python virtual environment and executes the tool.
 
 ### Usage
 
@@ -90,11 +90,12 @@ We have provided a helper script `./run.sh` that automatically activates the Pyt
 ./run.sh --scope "projects/proj-oka-int-demo" --format csv > resources.csv
 ```
 
-
 ---
 
 ## Directory Structure
 
-*   [agent.py](file:///Users/devavratoka/Documents/agent-asset-inventory/agent.py) - The core Python script using GCP libraries.
+*   [asset_inventory.py](file:///Users/devavratoka/Documents/agent-asset-inventory/asset_inventory.py) - The core Python script using GCP libraries.
 *   [run.sh](file:///Users/devavratoka/Documents/agent-asset-inventory/run.sh) - Simple bash entrypoint that handles python virtual environment activation.
+
 *   [requirements.txt](file:///Users/devavratoka/Documents/agent-asset-inventory/requirements.txt) - Dependency file.
+*   [code_walkthrough.md](file:///Users/devavratoka/Documents/agent-asset-inventory/code_walkthrough.md) - Code walkthrough for Terraform developers.
