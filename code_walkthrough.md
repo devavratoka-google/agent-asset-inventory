@@ -41,7 +41,7 @@ def format_scope(scope):
             return f"projects/{scope}"
     return scope
 ```
-*   **What it does**: This ensures that if a user types `--scope 340934488751`, the script formats it as `organizations/340934488751`. If they type `--scope proj-oka-demo`, it formats it as `projects/proj-oka-demo`.
+*   **What it does**: This ensures that if a user types `--scope <numeric-org-id>`, the script formats it as `organizations/<numeric-org-id>`. If they type `--scope proj-oka-demo`, it formats it as `projects/proj-oka-demo`.
 *   **Terraform Analogy**: This is like using local variables with conditional logic:
     ```hcl
     locals {

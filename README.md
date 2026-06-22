@@ -57,17 +57,17 @@ We have provided a helper script `./run.sh` that automatically activates the Pyt
 
 ### 1. View all GCP Resources in your Organization
 ```bash
-./run.sh --scope "organizations/340934488751"
+./run.sh --scope "organizations/<numeric-org-id>"
 ```
 
 ### 2. View all Buckets and SQL Instances in your Organization
 ```bash
-./run.sh --scope "organizations/340934488751" -t "storage.googleapis.com/Bucket" -t "sqladmin.googleapis.com/Instance"
+./run.sh --scope "organizations/<numeric-org-id>" -t "storage.googleapis.com/Bucket" -t "sqladmin.googleapis.com/Instance"
 ```
 
 ### 3. View only Compute VM Instances (Detailed layout)
 ```bash
-./run.sh --scope "organizations/340934488751" --vms-only
+./run.sh --scope "organizations/<numeric-org-id>" --vms-only
 ```
 
 ### 4. View only RUNNING VMs in a project
@@ -77,8 +77,9 @@ We have provided a helper script `./run.sh` that automatically activates the Pyt
 
 ### 5. Group all resources in the organization by Project ID
 ```bash
-./run.sh --scope "organizations/340934488751" --group-by project
+./run.sh --scope "organizations/<numeric-org-id>" --group-by project
 ```
+
 
 ### 6. Output all resources as JSON
 ```bash
