@@ -72,7 +72,7 @@ We have provided a helper script `./run.sh` that automatically activates the Pyt
 
 ### 4. View only RUNNING VMs in a project
 ```bash
-./run.sh --scope "projects/proj-oka-int-demo" --vms-only --query "state: RUNNING"
+./run.sh --scope "projects/<project-id>" --vms-only --query "state: RUNNING"
 ```
 
 ### 5. Group all resources in the organization by Project ID
@@ -83,13 +83,14 @@ We have provided a helper script `./run.sh` that automatically activates the Pyt
 
 ### 6. Output all resources as JSON
 ```bash
-./run.sh --scope "projects/proj-oka-int-demo" --format json
+./run.sh --scope "projects/<project-id>" --format json
 ```
 
 ### 7. Save resources list to a CSV file
 ```bash
-./run.sh --scope "projects/proj-oka-int-demo" --format csv > resources.csv
+./run.sh --scope "projects/<project-id>" --format csv > resources.csv
 ```
+
 
 ---
 
