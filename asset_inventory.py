@@ -184,8 +184,15 @@ def extract_generic_details(inst):
             if len(details) >= 3:
                 break
 
+    # Append resource labels if present
+    labels = inst.get("labels") or {}
+    if labels:
+        labels_str = ", ".join(f"{k}={v}" for k, v in labels.items())
+        details.append(f"labels:{{{labels_str}}}")
+
     detail_str = ", ".join(details) if details else "N/A"
     return short_type, status, detail_str
+
 
 @click.command()
 @click.option('--scope', '-s', required=True, help="GCP Scope (e.g., 'organizations/123456789', 'folders/456789', 'projects/my-project')")
