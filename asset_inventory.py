@@ -158,6 +158,12 @@ def extract_generic_details(inst):
         if router:
             details.append(f"Router: {router}")
 
+    elif asset_type == "file.googleapis.com/Instance":
+        ips = add_attrs.get("networkIpAddresses") or add_attrs.get("network_ip_addresses") or []
+        if ips:
+            details.append(f"IP: {ips[0] if isinstance(ips, list) else ips}")
+
+
     # Fallback: Extract key fields dynamically if no explicit rules matched or details is empty
     if not details and add_attrs:
         ignore_keys = {
