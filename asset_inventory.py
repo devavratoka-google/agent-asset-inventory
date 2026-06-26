@@ -175,6 +175,12 @@ def extract_generic_details(inst):
         if ips:
             details.append(f"IP: {ips[0] if isinstance(ips, list) else ips}")
 
+    elif asset_type == "compute.googleapis.com/ForwardingRule":
+        ip = add_attrs.get("IPAddress") or add_attrs.get("ip_address") or add_attrs.get("IP_address") or ""
+        if ip:
+            details.append(f"IP: {ip}")
+
+
 
     # Fallback: Extract key fields dynamically if no explicit rules matched or details is empty
     if not details and add_attrs:
