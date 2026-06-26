@@ -68,7 +68,19 @@ def extract_vm_attrs(inst):
         
     return status, machine_type, internal_ips, external_ips
 
+# Helper to extract a friendly resource display name with a fallback to the URI leaf name
+def get_resource_name(inst):
+    name = inst.get("display_name") or inst.get("displayName")
+    if not name:
+        full_name = inst.get("name") or ""
+        if "/" in full_name:
+            name = full_name.split("/")[-1]
+        else:
+            name = "N/A"
+    return name
+
 # Helper to extract a friendly type and details from any resource type
+
 def extract_generic_details(inst):
     asset_type = inst.get("asset_type") or inst.get("assetType", "Unknown Type")
     add_attrs = inst.get("additional_attributes") or inst.get("additionalAttributes") or {}
@@ -289,7 +301,7 @@ def main(scope, query, asset_type, vms_only, group_by, format):
                 for inst in resources:
                     status, machine_type, internal_ips, external_ips = extract_vm_attrs(inst)
                     writer.writerow([
-                        inst.get("display_name") or inst.get("displayName", "N/A"),
+                        get_resource_name(inst),
                         clean_project(inst.get("project", "")),
                         clean_zone(inst.get("location", "")),
                         status,
@@ -302,7 +314,7 @@ def main(scope, query, asset_type, vms_only, group_by, format):
                 for inst in resources:
                     short_type, status, details = extract_generic_details(inst)
                     writer.writerow([
-                        inst.get("display_name") or inst.get("displayName", "N/A"),
+                        get_resource_name(inst),
                         short_type,
                         clean_project(inst.get("project", "")),
                         clean_zone(inst.get("location", "")),
@@ -331,7 +343,7 @@ def main(scope, query, asset_type, vms_only, group_by, format):
                     table.add_column("External IP(s)", style="magenta")
                     
                     for inst in items:
-                        name = inst.get("display_name") or inst.get("displayName", "N/A")
+                        name = get_resource_name(inst)
                         zone = clean_zone(inst.get("location", ""))
                         status, machine_type, internal_ips, external_ips = extract_vm_attrs(inst)
                         
@@ -357,7 +369,7 @@ def main(scope, query, asset_type, vms_only, group_by, format):
                     table.add_column("Details", style="dim cyan")
                     
                     for inst in items:
-                        name = inst.get("display_name") or inst.get("displayName", "N/A")
+                        name = get_resource_name(inst)
                         zone = clean_zone(inst.get("location", ""))
                         short_type, status, details = extract_generic_details(inst)
                         
@@ -392,7 +404,7 @@ def main(scope, query, asset_type, vms_only, group_by, format):
                 table.add_column("Details", style="dim cyan")
                 
                 for inst in items:
-                    name = inst.get("display_name") or inst.get("displayName", "N/A")
+                    name = get_resource_name(inst)
                     project = clean_project(inst.get("project", ""))
                     zone = clean_zone(inst.get("location", ""))
                     _, status, details = extract_generic_details(inst)
@@ -427,7 +439,7 @@ def main(scope, query, asset_type, vms_only, group_by, format):
                 table.add_column("External IP(s)", style="magenta")
 
                 for inst in resources:
-                    name = inst.get("display_name") or inst.get("displayName", "N/A")
+                    name = get_resource_name(inst)
                     project = clean_project(inst.get("project", ""))
                     zone = clean_zone(inst.get("location", ""))
                     status, machine_type, internal_ips, external_ips = extract_vm_attrs(inst)
@@ -464,7 +476,7 @@ def main(scope, query, asset_type, vms_only, group_by, format):
                 table.add_column("Details", style="dim cyan")
 
                 for inst in resources:
-                    name = inst.get("display_name") or inst.get("displayName", "N/A")
+                    name = get_resource_name(inst)
                     project = clean_project(inst.get("project", ""))
                     zone = clean_zone(inst.get("location", ""))
                     short_type, status, details = extract_generic_details(inst)
