@@ -2,9 +2,29 @@
 
 This is a local Python-based command-line tool that queries Google Cloud Asset Inventory to list and display GCP resources in a specified scope (Organization, Folder, or Project).
 
-It can retrieve a complete inventory of all resources (e.g., Disks, Buckets, Networks, SQL Instances) or render a specialized, detailed table for Compute VM Instances.
-
 It supports rendering outputs in a premium, beautifully-styled CLI table, JSON format, or CSV format.
+
+### Key Features
+
+*   **Smart Name Fallback**: Automatically extracts resource display names. If a resource lacks a display name field (e.g., Memorystore Redis instances), it falls back to the leaf name of its resource path URI.
+*   **Asset-Specific Detail Parsing**: Extracts and formats key configuration parameters for specific asset types:
+    *   **Compute Engine VM Instances** (`compute.googleapis.com/Instance`): Machine type, internal and external IPs, status.
+    *   **Cloud Storage Buckets** (`storage.googleapis.com/Bucket`): Storage class.
+    *   **Compute Engine Disks** (`compute.googleapis.com/Disk`): Size in GB, disk type.
+    *   **Cloud DNS Managed Zones** (`dns.googleapis.com/ManagedZone`): DNS name.
+    *   **Cloud SQL Instances** (`sqladmin.googleapis.com/Instance`): Database version.
+    *   **Compute Engine VPC Networks** (`compute.googleapis.com/Network`): Routing mode.
+    *   **IAM Service Accounts** (`iam.googleapis.com/ServiceAccount`): Email address.
+    *   **GKE Clusters** (`container.googleapis.com/Cluster`): Node count, API endpoint.
+    *   **Dataproc Clusters** (`dataproc.googleapis.com/Cluster`): Worker node count.
+    *   **Cloud Interconnects** (`compute.googleapis.com/Interconnect`): Link type, operational status.
+    *   **Cloud Interconnect Attachments** (`compute.googleapis.com/InterconnectAttachment`): Bandwidth, router name.
+    *   **Cloud Filestore Instances** (`file.googleapis.com/Instance`): IP addresses.
+    *   **Forwarding Rules / PSC Endpoints** (`compute.googleapis.com/ForwardingRule`): Target IP address.
+*   **Dynamic Fallback Parser**: For resource types not explicitly listed above, it dynamically extracts up to three key non-system attributes from `additionalAttributes` to provide meaningful context in the details column.
+*   **Resource Labels Extraction**: Automatically extracts and formats resource labels as `labels:{key=val}` in the details column.
+*   **Interactive Visual UI**: Features a beautiful loader spinner during API execution and a clean, responsive layout designed using the `rich` library.
+*   **Grouping Outputs**: Organize results dynamically using `--group-by project` or `--group-by type` flags.
 
 ## Setup & Prerequisites
 
