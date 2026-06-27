@@ -4,6 +4,10 @@ This is a local Python-based command-line tool that queries Google Cloud Asset I
 
 It supports rendering outputs in a premium, beautifully-styled CLI table, JSON format, or CSV format.
 
+> [!NOTE]
+> If you want to view a specific resource in the inventory and the script is not currently scoped for it, please open an issue and I will update the script to support that resource.
+
+
 ### Key Features
 
 *   **Smart Name Fallback**: Automatically extracts resource display names. If a resource lacks a display name field (e.g., Memorystore Redis instances), it falls back to the leaf name of its resource path URI.
