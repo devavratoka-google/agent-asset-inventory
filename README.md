@@ -25,6 +25,8 @@ It supports rendering outputs in a premium, beautifully-styled CLI table, JSON f
     *   **Cloud Interconnect Attachments** (`compute.googleapis.com/InterconnectAttachment`): Bandwidth, router name.
     *   **Cloud Filestore Instances** (`file.googleapis.com/Instance`): IP addresses.
     *   **Forwarding Rules / PSC Endpoints** (`compute.googleapis.com/ForwardingRule`): Target IP address.
+    *   **Cloud Run Services** (`run.googleapis.com/Service`): Service URL, latest ready revision name.
+    *   **Cloud Run Jobs** (`run.googleapis.com/Job`): Latest created execution name, execution count.
 *   **Dynamic Fallback Parser**: For resource types not explicitly listed above, it dynamically extracts up to three key non-system attributes from `additionalAttributes` to provide meaningful context in the details column.
 *   **Resource Labels Extraction**: Automatically extracts and formats resource labels as `labels:{key=val}` in the details column.
 *   **Interactive Visual UI**: Features a beautiful loader spinner during API execution and a clean, responsive layout designed using the `rich` library.

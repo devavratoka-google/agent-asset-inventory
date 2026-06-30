@@ -91,6 +91,8 @@ We then use `if / elif` (equivalent to HCL `cond ? true : false` nested expressi
         sc = add_attrs.get("storageClass") or add_attrs.get("storage_class") or ""
         if sc:
             details.append(f"Class: {sc}")
+
+    # Similar handlers parse GKE, Cloud Run Services, Cloud Run Jobs, Cloud SQL, DNS, etc.
 ```
 *   `details.append(...)` is like appending items to an HCL list.
 

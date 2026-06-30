@@ -180,6 +180,27 @@ def extract_generic_details(inst):
         if ip:
             details.append(f"IP: {ip}")
 
+    elif asset_type == "run.googleapis.com/Service":
+        url = add_attrs.get("uri") or add_attrs.get("url") or add_attrs.get("status", {}).get("url") or ""
+        if url:
+            details.append(f"URL: {url}")
+        rev = add_attrs.get("latestReadyRevision") or add_attrs.get("latestReadyRevisionName") or add_attrs.get("status", {}).get("latestReadyRevisionName") or ""
+        if rev:
+            details.append(f"LatestRev: {rev}")
+
+    elif asset_type == "run.googleapis.com/Job":
+        exec_ref = add_attrs.get("latestCreatedExecution") or {}
+        exec_name = exec_ref.get("name") if isinstance(exec_ref, dict) else exec_ref
+        if not exec_name:
+            exec_name = add_attrs.get("latestCreatedExecution") or ""
+        if "/" in exec_name:
+            exec_name = exec_name.split("/")[-1]
+        if exec_name:
+            details.append(f"LatestExec: {exec_name}")
+        exec_count = add_attrs.get("executionCount") or add_attrs.get("execution_count")
+        if exec_count:
+            details.append(f"ExecCount: {exec_count}")
+
 
 
     # Fallback: Extract key fields dynamically if no explicit rules matched or details is empty
